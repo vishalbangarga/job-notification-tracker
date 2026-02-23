@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Job Notification App – Design System Example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./design-system.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <div class="top-bar__left">Job Notification App</div>
+        <div class="top-bar__center">Step 1 / 4</div>
+        <div class="top-bar__right">
+          <span class="status-badge status-badge--not-started">Not Started</span>
+        </div>
+      </header>
+
+      <!-- Context Header -->
+      <section class="context-header">
+        <h1 class="context-header__title">
+          Define how this workspace should feel for candidates.
+        </h1>
+        <p class="context-header__subtitle">
+          Use this step to set a clear, focused environment before adding any product-specific flows or logic.
+        </p>
+      </section>
+
+      <!-- Workspace -->
+      <main class="workspace-row">
+        <!-- Primary Workspace (70%) -->
+        <section class="primary-workspace" aria-label="Primary workspace">
+          <article class="card">
+            <header>
+              <h2 class="card__title">Interface framing</h2>
+              <p class="card__subtitle text-block">
+                Keep each screen centered on one primary decision. Use cards and whitespace to separate unrelated concerns.
+              </p>
+            </header>
+            <div class="card__section text-block">
+              <div class="field">
+                <label class="field__label" for="primary-focus">
+                  Primary decision for this step
+                </label>
+                <span class="field__hint">
+                  Describe it in one short, neutral sentence.
+                </span>
+                <input
+                  id="primary-focus"
+                  type="text"
+                  placeholder="Example: Review which notifications should reach candidates first."
+                />
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <header>
+              <h2 class="card__title">Error behaviour</h2>
+              <p class="card__subtitle text-block">
+                When something goes wrong, clearly state what happened and how to move forward. Avoid blame.
+              </p>
+            </header>
+
+            <div class="card__section">
+              <div class="error-banner text-block">
+                We couldn’t apply your latest changes. Check that all required fields are filled, then try saving
+                again. If this keeps happening, you can safely refresh this page—your previous choices are preserved.
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <header>
+              <h2 class="card__title">Empty state guidance</h2>
+              <p class="card__subtitle text-block">
+                Empty states should invite the next meaningful action instead of showing a blank surface.
+              </p>
+            </header>
+
+            <div class="card__section">
+              <div class="empty-state">
+                <h3 class="empty-state__title">Nothing configured yet.</h3>
+                <p class="empty-state__body">
+                  Start by defining a single, clear outcome for this step. Once that is in place, you can layer in
+                  supporting details without crowding the interface.
+                </p>
+                <button class="btn btn-primary" type="button">
+                  Add first guideline
+                </button>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- Secondary Panel (30%) -->
+        <aside class="secondary-panel" aria-label="Secondary guidance panel">
+          <header>
+            <h2 class="secondary-panel__title">Step explanation</h2>
+            <p class="secondary-panel__description text-block">
+              Use this panel to keep the purpose of the current step visible. The goal is clarity, not persuasion.
+            </p>
+          </header>
+
+          <section>
+            <h3 class="secondary-panel__title" style="font-size: var(--font-size-heading-md);">
+              Copyable prompt
+            </h3>
+            <div class="prompt-box">
+Design this step so a candidate can answer one question at a time without feeling rushed. 
+Use calm spacing, a single primary action, and clear language about what happens next.
+            </div>
+          </section>
+
+          <section>
+            <div class="button-row">
+              <button class="btn btn-secondary" type="button">Save structure</button>
+              <button class="btn btn-primary" type="button">Continue</button>
+            </div>
+          </section>
+        </aside>
+      </main>
+
+      <!-- Proof Footer -->
+      <footer class="proof-footer" aria-label="Proof checklist">
+        <div class="proof-footer__item">
+          <span class="proof-footer__box" aria-hidden="true"></span>
+          <span>UI Built</span>
+        </div>
+        <div class="proof-footer__item">
+          <span class="proof-footer__box" aria-hidden="true"></span>
+          <span>Logic Working</span>
+        </div>
+        <div class="proof-footer__item">
+          <span class="proof-footer__box" aria-hidden="true"></span>
+          <span>Test Passed</span>
+        </div>
+        <div class="proof-footer__item">
+          <span class="proof-footer__box" aria-hidden="true"></span>
+          <span>Deployed</span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
+
