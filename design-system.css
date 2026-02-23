@@ -491,3 +491,15 @@ select:focus-visible {
   }
 }
 
+/* Landing page */
+
+.landing-header {
+  padding-top: var(--space-64);
+  padding-bottom: var(--space-64);
+}
+
+.landing-header__cta {
+  margin-top: var(--space-24);
+}
+
+
