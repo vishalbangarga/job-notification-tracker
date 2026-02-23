@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Job Notification App – Shell</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./design-system.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Shared Top Navigation Bar -->
+      <header class="nav-bar">
+        <div class="nav-bar__brand">Job Notification App</div>
+        <nav class="nav-bar__desktop" aria-label="Primary navigation">
+          <a href="/dashboard" data-route="/dashboard" class="nav-link">Dashboard</a>
+          <a href="/saved" data-route="/saved" class="nav-link">Saved</a>
+          <a href="/digest" data-route="/digest" class="nav-link">Digest</a>
+          <a href="/settings" data-route="/settings" class="nav-link">Settings</a>
+          <a href="/proof" data-route="/proof" class="nav-link">Proof</a>
+        </nav>
+        <button class="nav-bar__toggle" type="button" aria-label="Toggle navigation">
+          <span class="nav-bar__toggle-icon"></span>
+        </button>
+      </header>
+
+      <nav class="nav-bar__mobile-panel" aria-label="Primary navigation mobile">
+        <a href="/dashboard" data-route="/dashboard" class="nav-link">Dashboard</a>
+        <a href="/saved" data-route="/saved" class="nav-link">Saved</a>
+        <a href="/digest" data-route="/digest" class="nav-link">Digest</a>
+        <a href="/settings" data-route="/settings" class="nav-link">Settings</a>
+        <a href="/proof" data-route="/proof" class="nav-link">Proof</a>
+      </nav>
+
+      <!-- Route outlet -->
+      <main id="route-container"></main>
+
+      <!-- Shared Proof Footer -->
+      <footer class="proof-footer" aria-label="Proof checklist">
+        <div class="proof-footer__item">
+          <span class="proof-footer__box" aria-hidden="true"></span>
+          <span>UI Built</span>
+        </div>
+        <div class="proof-footer__item">
+          <span class="proof-footer__box" aria-hidden="true"></span>
+          <span>Logic Working</span>
+        </div>
+        <div class="proof-footer__item">
+          <span class="proof-footer__box" aria-hidden="true"></span>
+          <span>Test Passed</span>
+        </div>
+        <div class="proof-footer__item">
+          <span class="proof-footer__box" aria-hidden="true"></span>
+          <span>Deployed</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="./router.js"></script>
+  </body>
+</html>
+

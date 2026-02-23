@@ -198,9 +198,10 @@ body {
 }
 
 .card__section {
-  & + & {
-    margin-top: var(--space-24);
-  }
+}
+
+.card__section + .card__section {
+  margin-top: var(--space-24);
 }
 
 /* Buttons */
@@ -384,5 +385,109 @@ select:focus-visible {
 
 .text-block {
   max-width: var(--max-text-width);
+}
+
+/* Global navigation */
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-40);
+  height: var(--space-64);
+  border-bottom: var(--border-subtle);
+  background-color: var(--color-bg);
+}
+
+.nav-bar__brand {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-heading-md);
+}
+
+.nav-bar__desktop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-24);
+}
+
+.nav-link {
+  position: relative;
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+  padding: var(--space-8) 0;
+}
+
+.nav-link:hover {
+  text-decoration: none;
+}
+
+.nav-link--active {
+  border-bottom: 2px solid var(--color-accent);
+}
+
+.nav-bar__toggle {
+  display: none;
+  border: none;
+  background: transparent;
+  padding: var(--space-8);
+  cursor: pointer;
+}
+
+.nav-bar__toggle-icon {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background-color: var(--color-text);
+  position: relative;
+}
+
+.nav-bar__toggle-icon::before,
+.nav-bar__toggle-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 20px;
+  height: 2px;
+  background-color: var(--color-text);
+}
+
+.nav-bar__toggle-icon::before {
+  top: -6px;
+}
+
+.nav-bar__toggle-icon::after {
+  top: 6px;
+}
+
+.nav-bar__mobile-panel {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-16) var(--space-40) var(--space-16);
+  border-bottom: var(--border-subtle);
+  background-color: var(--color-bg);
+}
+
+.nav-bar__mobile-panel .nav-link {
+  padding: var(--space-8) 0;
+}
+
+.nav-bar__mobile-panel--open {
+  display: flex;
+}
+
+@media (max-width: 768px) {
+  .nav-bar {
+    padding: 0 var(--space-16);
+  }
+
+  .nav-bar__desktop {
+    display: none;
+  }
+
+  .nav-bar__toggle {
+    display: inline-flex;
+  }
 }
 
