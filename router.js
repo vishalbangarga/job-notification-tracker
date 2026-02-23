@@ -5,7 +5,7 @@ const routes = {
   },
   "/dashboard": {
     title: "Dashboard",
-    subtitle: "No jobs yet. In the next step, you will load a realistic dataset.",
+    subtitle: "Review current opportunities using filters that keep the view focused.",
   },
   "/settings": {
     title: "Settings",
@@ -13,7 +13,7 @@ const routes = {
   },
   "/saved": {
     title: "Saved",
-    subtitle: "Clean, calm space for jobs you mark to review again later.",
+    subtitle: "Calm space for the roles you want to revisit with intention.",
   },
   "/digest": {
     title: "Digest",
@@ -28,6 +28,71 @@ const routes = {
     subtitle: "The page you are looking for does not exist.",
   },
 };
+
+const SAVED_JOBS_KEY = "jobNotificationTracker.savedJobs";
+const ALL_JOBS = Array.isArray(window.JOBS) ? window.JOBS : [];
+
+let currentFilters = {
+  keyword: "",
+  location: "",
+  mode: "",
+  experience: "",
+  source: "",
+};
+
+let currentSort = "latest";
+
+function loadSavedJobIds() {
+  try {
+    const raw = window.localStorage.getItem(SAVED_JOBS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function saveJobId(id) {
+  const existing = loadSavedJobIds();
+  if (existing.includes(id)) {
+    return;
+  }
+  const updated = [...existing, id];
+  try {
+    window.localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify(updated));
+  } catch {
+    // Swallow storage errors silently to keep UI calm.
+  }
+}
+
+function getSavedJobs() {
+  const ids = loadSavedJobIds();
+  if (!ids.length) return [];
+  const byId = new Map(ALL_JOBS.map((job) => [job.id, job]));
+  return ids
+    .map((id) => byId.get(id))
+    .filter(Boolean);
+}
+
+function getUniqueValuesFromJobs(field) {
+  const set = new Set();
+  ALL_JOBS.forEach((job) => {
+    if (job[field]) {
+      set.add(job[field]);
+    }
+  });
+  return Array.from(set).sort();
+}
+
+function formatPostedDaysAgo(days) {
+  if (days === 0) return "Today";
+  if (days === 1) return "1 day ago";
+  return `${days} days ago`;
+}
 
 function getPath() {
   return window.location.pathname || "/";
@@ -167,50 +232,12 @@ function render(path) {
   }
 
   if (path === "/dashboard") {
-    container.innerHTML = `
-      <section class="context-header">
-        <h1 class="context-header__title">${routes["/dashboard"].title}</h1>
-        <p class="context-header__subtitle">
-          ${routes["/dashboard"].subtitle}
-        </p>
-      </section>
-      <section class="workspace-row">
-        <section class="primary-workspace" aria-label="Dashboard overview">
-          <article class="card">
-            <div class="empty-state">
-              <h3 class="empty-state__title">No jobs yet.</h3>
-              <p class="empty-state__body">
-                In the next step, you will load a realistic dataset and see how this dashboard behaves with live information.
-              </p>
-            </div>
-          </article>
-        </section>
-      </section>
-    `;
+    renderDashboard(container);
     return;
   }
 
   if (path === "/saved") {
-    container.innerHTML = `
-      <section class="context-header">
-        <h1 class="context-header__title">${routes["/saved"].title}</h1>
-        <p class="context-header__subtitle">
-          ${routes["/saved"].subtitle}
-        </p>
-      </section>
-      <section class="workspace-row">
-        <section class="primary-workspace" aria-label="Saved jobs">
-          <article class="card">
-            <div class="empty-state">
-              <h3 class="empty-state__title">Nothing saved yet.</h3>
-              <p class="empty-state__body">
-                As you review opportunities, you’ll be able to mark certain jobs as saved. This calm workspace will hold them for focused follow-up.
-              </p>
-            </div>
-          </article>
-        </section>
-      </section>
-    `;
+    renderSaved(container);
     return;
   }
 
@@ -248,6 +275,396 @@ function render(path) {
       </section>
     `;
     return;
+  }
+}
+
+function renderDashboard(container) {
+  const locations = getUniqueValuesFromJobs("location");
+  const modes = getUniqueValuesFromJobs("mode");
+  const experiences = getUniqueValuesFromJobs("experience");
+  const sources = getUniqueValuesFromJobs("source");
+
+  const locationOptions = locations.map((loc) => `<option value="${loc}">${loc}</option>`).join("");
+  const modeOptions = modes.map((mode) => `<option value="${mode}">${mode}</option>`).join("");
+  const experienceOptions = experiences.map((exp) => `<option value="${exp}">${exp}</option>`).join("");
+  const sourceOptions = sources.map((src) => `<option value="${src}">${src}</option>`).join("");
+
+  container.innerHTML = `
+    <section class="context-header">
+      <h1 class="context-header__title">${routes["/dashboard"].title}</h1>
+      <p class="context-header__subtitle">
+        ${routes["/dashboard"].subtitle}
+      </p>
+    </section>
+    <section class="workspace-row">
+      <section class="primary-workspace" aria-label="Dashboard overview">
+        <article class="card filter-card">
+          <form class="filter-bar" id="job-filter-form">
+            <div class="filter-bar__field">
+              <label class="field__label" for="filter-keyword">Keyword</label>
+              <input id="filter-keyword" type="text" placeholder="Search by title or company" />
+            </div>
+            <div class="filter-bar__field">
+              <label class="field__label" for="filter-location">Location</label>
+              <select id="filter-location">
+                <option value="">All</option>
+                ${locationOptions}
+              </select>
+            </div>
+            <div class="filter-bar__field">
+              <label class="field__label" for="filter-mode">Mode</label>
+              <select id="filter-mode">
+                <option value="">All</option>
+                ${modeOptions}
+              </select>
+            </div>
+            <div class="filter-bar__field">
+              <label class="field__label" for="filter-experience">Experience</label>
+              <select id="filter-experience">
+                <option value="">All</option>
+                ${experienceOptions}
+              </select>
+            </div>
+            <div class="filter-bar__field">
+              <label class="field__label" for="filter-source">Source</label>
+              <select id="filter-source">
+                <option value="">All</option>
+                ${sourceOptions}
+              </select>
+            </div>
+            <div class="filter-bar__field">
+              <label class="field__label" for="filter-sort">Sort</label>
+              <select id="filter-sort">
+                <option value="latest">Latest</option>
+                <option value="oldest">Oldest</option>
+              </select>
+            </div>
+          </form>
+        </article>
+        <section id="job-list" class="job-list" aria-label="Job results"></section>
+      </section>
+    </section>
+  `;
+
+  setupFilterBar();
+  renderJobList();
+}
+
+function renderSaved(container) {
+  const savedJobs = getSavedJobs();
+
+  container.innerHTML = `
+    <section class="context-header">
+      <h1 class="context-header__title">${routes["/saved"].title}</h1>
+      <p class="context-header__subtitle">
+        ${routes["/saved"].subtitle}
+      </p>
+    </section>
+    <section class="workspace-row">
+      <section class="primary-workspace" aria-label="Saved jobs">
+        <section id="saved-job-list" class="job-list" aria-label="Saved job results"></section>
+      </section>
+    </section>
+  `;
+
+  const list = document.getElementById("saved-job-list");
+  if (!list) return;
+
+  if (!savedJobs.length) {
+    list.innerHTML = `
+      <div class="job-list__empty">
+        <h3 class="job-list__empty-title">No saved jobs yet.</h3>
+        <p class="job-list__empty-body">
+          As you review opportunities on the dashboard, you can save specific roles to revisit here with a clear head.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  renderJobCards(savedJobs, list, { showSave: false });
+}
+
+function setupFilterBar() {
+  const keywordInput = document.getElementById("filter-keyword");
+  const locationSelect = document.getElementById("filter-location");
+  const modeSelect = document.getElementById("filter-mode");
+  const experienceSelect = document.getElementById("filter-experience");
+  const sourceSelect = document.getElementById("filter-source");
+  const sortSelect = document.getElementById("filter-sort");
+
+  if (keywordInput) {
+    keywordInput.value = currentFilters.keyword;
+    keywordInput.addEventListener("input", () => {
+      currentFilters.keyword = keywordInput.value.trim();
+      renderJobList();
+    });
+  }
+
+  if (locationSelect) {
+    locationSelect.value = currentFilters.location;
+    locationSelect.addEventListener("change", () => {
+      currentFilters.location = locationSelect.value;
+      renderJobList();
+    });
+  }
+
+  if (modeSelect) {
+    modeSelect.value = currentFilters.mode;
+    modeSelect.addEventListener("change", () => {
+      currentFilters.mode = modeSelect.value;
+      renderJobList();
+    });
+  }
+
+  if (experienceSelect) {
+    experienceSelect.value = currentFilters.experience;
+    experienceSelect.addEventListener("change", () => {
+      currentFilters.experience = experienceSelect.value;
+      renderJobList();
+    });
+  }
+
+  if (sourceSelect) {
+    sourceSelect.value = currentFilters.source;
+    sourceSelect.addEventListener("change", () => {
+      currentFilters.source = sourceSelect.value;
+      renderJobList();
+    });
+  }
+
+  if (sortSelect) {
+    sortSelect.value = currentSort;
+    sortSelect.addEventListener("change", () => {
+      currentSort = sortSelect.value || "latest";
+      renderJobList();
+    });
+  }
+}
+
+function filterAndSortJobs() {
+  let jobs = [...ALL_JOBS];
+
+  if (currentFilters.keyword) {
+    const kw = currentFilters.keyword.toLowerCase();
+    jobs = jobs.filter(
+      (job) =>
+        job.title.toLowerCase().includes(kw) ||
+        job.company.toLowerCase().includes(kw)
+    );
+  }
+
+  if (currentFilters.location) {
+    jobs = jobs.filter((job) => job.location === currentFilters.location);
+  }
+
+  if (currentFilters.mode) {
+    jobs = jobs.filter((job) => job.mode === currentFilters.mode);
+  }
+
+  if (currentFilters.experience) {
+    jobs = jobs.filter((job) => job.experience === currentFilters.experience);
+  }
+
+  if (currentFilters.source) {
+    jobs = jobs.filter((job) => job.source === currentFilters.source);
+  }
+
+  jobs.sort((a, b) => {
+    if (currentSort === "oldest") {
+      return b.postedDaysAgo - a.postedDaysAgo;
+    }
+    // latest first (smaller postedDaysAgo is newer)
+    return a.postedDaysAgo - b.postedDaysAgo;
+  });
+
+  return jobs;
+}
+
+function renderJobList() {
+  const list = document.getElementById("job-list");
+  if (!list) return;
+
+  const jobs = filterAndSortJobs();
+  if (!jobs.length) {
+    list.innerHTML = `
+      <div class="job-list__empty">
+        <h3 class="job-list__empty-title">No jobs match your search.</h3>
+        <p class="job-list__empty-body">
+          Adjust the filters or clear the keyword search to see more roles again.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  renderJobCards(jobs, list, { showSave: true });
+}
+
+function renderJobCards(jobs, container, options) {
+  const { showSave } = options || { showSave: true };
+  const savedIds = loadSavedJobIds();
+
+  const cards = jobs
+    .map((job) => {
+      const isSaved = savedIds.includes(job.id);
+      const saveLabel = isSaved ? "Saved" : "Save";
+      const saveDisabled = isSaved ? "disabled" : "";
+
+      return `
+        <article class="card job-card" data-job-id="${job.id}">
+          <header class="job-card__header">
+            <h2 class="job-card__title">${job.title}</h2>
+            <p class="job-card__company">${job.company}</p>
+          </header>
+          <div class="job-card__meta">
+            <span class="job-card__meta-item">${job.location} • ${job.mode}</span>
+            <span class="job-card__meta-item">Experience: ${job.experience}</span>
+            <span class="job-card__meta-item">Salary: ${job.salaryRange}</span>
+            <span class="badge badge--source">${job.source}</span>
+          </div>
+          <div class="job-card__footer">
+            <div class="job-card__footer-left">
+              Posted ${formatPostedDaysAgo(job.postedDaysAgo)}
+            </div>
+            <div class="job-card__footer-actions">
+              <button
+                class="btn btn-secondary"
+                type="button"
+                data-action="view"
+                data-job-id="${job.id}"
+              >
+                View
+              </button>
+              ${
+                showSave
+                  ? `<button
+                      class="btn btn-secondary"
+                      type="button"
+                      data-action="save"
+                      data-job-id="${job.id}"
+                      ${saveDisabled}
+                    >
+                      ${saveLabel}
+                    </button>`
+                  : ""
+              }
+              <button
+                class="btn btn-primary"
+                type="button"
+                data-action="apply"
+                data-job-id="${job.id}"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  container.innerHTML = cards;
+
+  container.removeEventListener("click", handleJobListClick);
+  container.addEventListener("click", handleJobListClick);
+}
+
+function handleJobListClick(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  const action = target.getAttribute("data-action");
+  const jobId = target.getAttribute("data-job-id");
+  if (!action || !jobId) return;
+
+  const job = ALL_JOBS.find((j) => j.id === jobId);
+  if (!job) return;
+
+  if (action === "view") {
+    openJobModal(job);
+    return;
+  }
+
+  if (action === "save") {
+    saveJobId(job.id);
+    // Refresh current view to reflect saved state
+    render(getPath());
+    setActiveLink(getPath());
+    return;
+  }
+
+  if (action === "apply") {
+    window.open(job.applyUrl, "_blank", "noopener,noreferrer");
+  }
+}
+
+function openJobModal(job) {
+  closeJobModal();
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <header class="modal__header">
+        <h2 class="modal__title">${job.title}</h2>
+        <p class="modal__subtitle">${job.company} • ${job.location} • ${job.mode}</p>
+      </header>
+      <div class="modal__section">
+        <p class="job-card__meta-item">Experience: ${job.experience}</p>
+        <p class="job-card__meta-item">Salary: ${job.salaryRange}</p>
+        <p class="job-card__meta-item">Source: ${job.source}</p>
+        <p class="job-card__meta-item">Posted ${formatPostedDaysAgo(job.postedDaysAgo)}</p>
+      </div>
+      <div class="modal__section">
+        <h3 class="modal__section-title">Key skills</h3>
+        <div class="chip-list">
+          ${job.skills.map((skill) => `<span class="chip">${skill}</span>`).join("")}
+        </div>
+      </div>
+      <div class="modal__section">
+        <h3 class="modal__section-title">Role details</h3>
+        <p class="modal__description">${job.description}</p>
+      </div>
+      <footer class="modal__footer">
+        <button class="btn btn-secondary" type="button" data-modal-action="close">
+          Close
+        </button>
+        <button class="btn btn-primary" type="button" data-modal-action="apply">
+          Apply
+        </button>
+      </footer>
+    </div>
+  `;
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) {
+      closeJobModal();
+    }
+  });
+
+  overlay.querySelectorAll("[data-modal-action]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const action = (event.currentTarget && event.currentTarget.getAttribute("data-modal-action")) || "";
+      if (action === "close") {
+        closeJobModal();
+      } else if (action === "apply") {
+        window.open(job.applyUrl, "_blank", "noopener,noreferrer");
+        closeJobModal();
+      }
+    });
+  });
+
+  document.body.appendChild(overlay);
+}
+
+function closeJobModal() {
+  const existing = document.querySelector(".modal-overlay");
+  if (existing && existing.parentNode) {
+    existing.parentNode.removeChild(existing);
   }
 }
 
