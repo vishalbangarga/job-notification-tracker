@@ -5,6 +5,7 @@
   --color-accent: #8B0000;
   --color-success: #3F6F4A;
   --color-warning: #B1791F;
+  --color-info: #1C4E80;
 
   /* Typography */
   --font-family-heading: "Georgia", "Times New Roman", serif;
@@ -625,6 +626,80 @@ select:focus-visible {
   max-width: var(--max-text-width);
 }
 
+/* Job status controls */
+
+.job-card__status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.job-card__status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.job-status-label {
+  font-size: var(--font-size-body);
+  opacity: 0.85;
+}
+
+.job-status-badge {
+  border-radius: var(--radius-sm);
+  padding: var(--space-8) var(--space-16);
+  font-size: var(--font-size-body);
+  border: var(--border-subtle);
+}
+
+.job-status-badge--not-applied {
+  color: rgba(17, 17, 17, 0.75);
+  background-color: rgba(17, 17, 17, 0.02);
+}
+
+.job-status-badge--applied {
+  border-color: rgba(28, 78, 128, 0.5);
+  color: var(--color-info);
+  background-color: rgba(28, 78, 128, 0.06);
+}
+
+.job-status-badge--rejected {
+  border-color: rgba(139, 0, 0, 0.5);
+  color: var(--color-accent);
+  background-color: rgba(139, 0, 0, 0.06);
+}
+
+.job-status-badge--selected {
+  border-color: rgba(63, 111, 74, 0.5);
+  color: var(--color-success);
+  background-color: rgba(63, 111, 74, 0.06);
+}
+
+.job-status-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.job-status-button {
+  border-radius: var(--radius-sm);
+  border: var(--border-subtle);
+  background-color: rgba(17, 17, 17, 0.0);
+  padding: var(--space-8) var(--space-16);
+  font-size: var(--font-size-body);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-default) var(--transition-ease),
+    border-color var(--transition-default) var(--transition-ease),
+    color var(--transition-default) var(--transition-ease);
+}
+
+.job-status-button--active {
+  border-color: rgba(17, 17, 17, 0.3);
+  background-color: rgba(17, 17, 17, 0.04);
+}
+
 /* Modal */
 
 .modal-overlay {
@@ -842,5 +917,33 @@ select:focus-visible {
   .digest-job__footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* Toast notifications */
+
+.toast-container {
+  position: fixed;
+  bottom: var(--space-24);
+  right: var(--space-24);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  z-index: 1200;
+}
+
+.toast {
+  background-color: rgba(17, 17, 17, 0.9);
+  color: #ffffff;
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-body);
+  max-width: 320px;
+}
+
+@media (max-width: 768px) {
+  .toast-container {
+    left: var(--space-16);
+    right: var(--space-16);
   }
 }

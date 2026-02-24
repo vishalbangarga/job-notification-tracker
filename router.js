@@ -32,6 +32,8 @@ const routes = {
 const SAVED_JOBS_KEY = "jobNotificationTracker.savedJobs";
 const PREFERENCES_KEY = "jobTrackerPreferences";
 const DIGEST_KEY_PREFIX = "jobTrackerDigest_";
+const STATUS_KEY = "jobTrackerStatus";
+const STATUS_HISTORY_KEY = "jobTrackerStatusHistory";
 const ALL_JOBS = Array.isArray(window.JOBS) ? window.JOBS : [];
 
 let currentFilters = {
@@ -40,6 +42,7 @@ let currentFilters = {
   mode: "",
   experience: "",
   source: "",
+  status: "",
 };
 
 let currentSort = "latest";
@@ -55,6 +58,8 @@ const DEFAULT_PREFERENCES = {
   skills: [],
   minMatchScore: 40,
 };
+
+const STATUS_VALUES = ["Not Applied", "Applied", "Rejected", "Selected"];
 
 function loadSavedJobIds() {
   try {
@@ -281,6 +286,96 @@ function loadDigestForDate(dateStr) {
   } catch {
     return null;
   }
+}
+
+function loadStatusMap() {
+  try {
+    const raw = window.localStorage.getItem(STATUS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return {};
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+function saveStatusMap(map) {
+  try {
+    window.localStorage.setItem(STATUS_KEY, JSON.stringify(map));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function getJobStatus(jobId) {
+  const map = loadStatusMap();
+  const value = map[jobId];
+  if (!STATUS_VALUES.includes(value)) return "Not Applied";
+  return value;
+}
+
+function storeJobStatus(jobId, status) {
+  const map = loadStatusMap();
+  map[jobId] = status;
+  saveStatusMap(map);
+}
+
+function loadStatusHistory() {
+  try {
+    const raw = window.localStorage.getItem(STATUS_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+function appendStatusHistory(entry) {
+  const history = loadStatusHistory();
+  history.push(entry);
+  const trimmed = history.slice(-100);
+  try {
+    window.localStorage.setItem(STATUS_HISTORY_KEY, JSON.stringify(trimmed));
+  } catch {
+    // ignore storage failure
+  }
+}
+
+function getStatusBadgeClass(status) {
+  switch (status) {
+    case "Applied":
+      return "job-status-badge job-status-badge--applied";
+    case "Rejected":
+      return "job-status-badge job-status-badge--rejected";
+    case "Selected":
+      return "job-status-badge job-status-badge--selected";
+    default:
+      return "job-status-badge job-status-badge--not-applied";
+  }
+}
+
+function showToast(message) {
+  if (!message) return;
+  let container = document.querySelector(".toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.className = "toast-container";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  window.setTimeout(() => {
+    if (toast.parentNode === container) {
+      container.removeChild(toast);
+    }
+  }, 2500);
 }
 
 function storeDigestForDate(dateStr, digest) {
@@ -549,6 +644,7 @@ function renderDashboard(container) {
   const modeOptions = modes.map((mode) => `<option value="${mode}">${mode}</option>`).join("");
   const experienceOptions = experiences.map((exp) => `<option value="${exp}">${exp}</option>`).join("");
   const sourceOptions = sources.map((src) => `<option value="${src}">${src}</option>`).join("");
+  const statusOptions = STATUS_VALUES.map((value) => `<option value="${value}">${value}</option>`).join("");
 
   const { exists: prefsExist } = loadPreferences();
   if (!prefsExist) {
@@ -609,6 +705,13 @@ function renderDashboard(container) {
               <select id="filter-source">
                 <option value="">All</option>
                 ${sourceOptions}
+              </select>
+            </div>
+            <div class="filter-bar__field">
+              <label class="field__label" for="filter-status">Status</label>
+              <select id="filter-status">
+                <option value="">All</option>
+                ${statusOptions}
               </select>
             </div>
             <div class="filter-bar__field">
@@ -762,6 +865,12 @@ function renderDigestBody(digest) {
   const safeDate = digest.date || "";
   const jobs = Array.isArray(digest.jobs) ? digest.jobs : [];
 
+  const history = loadStatusHistory()
+    .filter((entry) => entry && entry.status && entry.status !== "Not Applied")
+    .slice(-20)
+    .reverse();
+  const byId = new Map(ALL_JOBS.map((job) => [job.id, job]));
+
   const jobHtml = jobs
     .map((job) => {
       const badgeStyle = getMatchBadgeStyle(job.matchScore || 0);
@@ -793,6 +902,47 @@ function renderDigestBody(digest) {
     })
     .join("");
 
+  const updatesHtml =
+    history.length === 0
+      ? `
+        <div class="digest-empty">
+          <div class="digest-empty__title">No recent status updates.</div>
+          <div class="digest-empty__body">
+            As you mark jobs as Applied, Rejected, or Selected, the latest changes will appear here.
+          </div>
+        </div>
+      `
+      : history
+          .map((entry) => {
+            const job = byId.get(entry.jobId);
+            if (!job) return "";
+            const date = new Date(entry.changedAt);
+            const label = isNaN(date.getTime()) ? entry.changedAt : date.toLocaleDateString();
+            return `
+              <div class="digest-job">
+                <div class="digest-job__row">
+                  <div class="digest-job__left">
+                    <div class="digest-job__title">${job.title}</div>
+                    <div class="digest-job__meta">
+                      ${job.company}
+                    </div>
+                  </div>
+                  <div class="digest-job__right">
+                    <span class="job-status-badge ${getStatusBadgeClass(entry.status).split(" ").slice(1).join(" ")}">
+                      ${entry.status}
+                    </span>
+                  </div>
+                </div>
+                <div class="digest-job__footer">
+                  <div class="digest-job__posted">
+                    Updated on ${label}
+                  </div>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+
   return `
     <div class="digest-header">
       <h2 class="digest-card__title">Top 10 Jobs For You — 9AM Digest</h2>
@@ -803,6 +953,13 @@ function renderDigestBody(digest) {
     </div>
     <div class="digest-footer">
       This digest was generated based on your preferences.
+    </div>
+    <div style="height: var(--space-24);"></div>
+    <div class="digest-header">
+      <h2 class="digest-card__title">Recent Status Updates</h2>
+    </div>
+    <div class="digest-jobs">
+      ${updatesHtml}
     </div>
   `;
 }
@@ -919,6 +1076,7 @@ function setupFilterBar() {
   const modeSelect = document.getElementById("filter-mode");
   const experienceSelect = document.getElementById("filter-experience");
   const sourceSelect = document.getElementById("filter-source");
+  const statusSelect = document.getElementById("filter-status");
   const sortSelect = document.getElementById("filter-sort");
   const showOnlyToggle = document.getElementById("filter-showOnlyMatches");
 
@@ -958,6 +1116,14 @@ function setupFilterBar() {
     sourceSelect.value = currentFilters.source;
     sourceSelect.addEventListener("change", () => {
       currentFilters.source = sourceSelect.value;
+      renderJobList();
+    });
+  }
+
+  if (statusSelect) {
+    statusSelect.value = currentFilters.status;
+    statusSelect.addEventListener("change", () => {
+      currentFilters.status = statusSelect.value;
       renderJobList();
     });
   }
@@ -1011,6 +1177,10 @@ function filterAndSortJobs() {
 
   if (currentFilters.source) {
     jobs = jobs.filter((job) => job.source === currentFilters.source);
+  }
+
+  if (currentFilters.status) {
+    jobs = jobs.filter((job) => getJobStatus(job.id) === currentFilters.status);
   }
 
   if (showOnlyMatches && prefsExist) {
@@ -1108,6 +1278,9 @@ function renderJobCards(jobs, container, options) {
           </span>`
         : "";
 
+      const status = getJobStatus(job.id);
+      const statusBadgeClass = getStatusBadgeClass(status);
+
       return `
         <article class="card job-card" data-job-id="${job.id}">
           <header class="job-card__header">
@@ -1120,6 +1293,26 @@ function renderJobCards(jobs, container, options) {
             <span class="job-card__meta-item">Salary: ${job.salaryRange}</span>
             <span class="badge badge--source">${job.source}</span>
             ${matchBadge}
+          </div>
+          <div class="job-card__status">
+            <div class="job-card__status-row">
+              <span class="job-status-label">Status</span>
+              <span class="${statusBadgeClass}">${status}</span>
+            </div>
+            <div class="job-status-buttons" data-status-group="${job.id}">
+              ${STATUS_VALUES.map((value) => {
+                const activeClass = value === status ? " job-status-button--active" : "";
+                return `<button
+                  type="button"
+                  class="job-status-button${activeClass}"
+                  data-action="status"
+                  data-job-id="${job.id}"
+                  data-status="${value}"
+                >
+                  ${value}
+                </button>`;
+              }).join("")}
+            </div>
           </div>
           <div class="job-card__footer">
             <div class="job-card__footer-left">
@@ -1190,6 +1383,47 @@ function handleJobListClick(event) {
     target.setAttribute("disabled", "disabled");
     target.textContent = "Saved";
     lastJobListRenderKey = "";
+    return;
+  }
+
+  if (action === "status") {
+    const newStatus = target.getAttribute("data-status") || "Not Applied";
+    if (!STATUS_VALUES.includes(newStatus)) {
+      return;
+    }
+
+    storeJobStatus(job.id, newStatus);
+    appendStatusHistory({
+      jobId: job.id,
+      status: newStatus,
+      changedAt: new Date().toISOString(),
+    });
+
+    const group = target.closest('[data-status-group]');
+    if (group) {
+      group.querySelectorAll(".job-status-button").forEach((btn) => {
+        btn.classList.remove("job-status-button--active");
+      });
+      target.classList.add("job-status-button--active");
+
+      const groupJobId = group.getAttribute("data-status-group");
+      if (groupJobId) {
+        const card = group.closest('.job-card');
+        if (card) {
+          const badge = card.querySelector(".job-status-badge, .job-status-badge--not-applied, .job-status-badge--applied, .job-status-badge--rejected, .job-status-badge--selected");
+          if (badge) {
+            const cls = getStatusBadgeClass(newStatus);
+            badge.className = cls;
+            badge.textContent = newStatus;
+          }
+        }
+      }
+    }
+
+    if (newStatus === "Applied" || newStatus === "Rejected" || newStatus === "Selected") {
+      showToast(`Status updated: ${newStatus}`);
+    }
+
     return;
   }
 
