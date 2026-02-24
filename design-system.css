@@ -947,3 +947,138 @@ select:focus-visible {
     right: var(--space-16);
   }
 }
+
+/* Test checklist / ship lock */
+
+.jt-page {
+  padding: var(--space-40);
+}
+
+.jt-card {
+  max-width: var(--max-text-width);
+  margin: 0 auto;
+  background-color: #ffffff;
+  border: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-40);
+}
+
+.jt-card__title {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-heading-lg);
+  margin: 0 0 var(--space-8);
+}
+
+.jt-card__subtitle {
+  margin: 0 0 var(--space-24);
+  opacity: 0.85;
+}
+
+.jt-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: var(--space-16);
+  border: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: rgba(17, 17, 17, 0.02);
+  margin-bottom: var(--space-24);
+}
+
+.jt-summary__count {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-heading-md);
+  margin: 0;
+}
+
+.jt-summary__warning {
+  margin: 0;
+  opacity: 0.8;
+}
+
+.jt-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.jt-check {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: var(--space-16);
+  border: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: rgba(17, 17, 17, 0.0);
+}
+
+.jt-check__left {
+  display: flex;
+  gap: var(--space-16);
+  align-items: flex-start;
+}
+
+.jt-check__box {
+  margin-top: 3px;
+}
+
+.jt-check__label {
+  margin: 0;
+}
+
+.jt-check__help {
+  font-size: var(--font-size-body);
+  opacity: 0.75;
+  text-decoration: underline;
+  text-decoration-color: rgba(17, 17, 17, 0.25);
+  cursor: help;
+  white-space: nowrap;
+}
+
+.jt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-16);
+  margin-top: var(--space-24);
+}
+
+.jt-locked {
+  border: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-24);
+  background-color: rgba(17, 17, 17, 0.02);
+}
+
+.jt-locked__title {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-heading-md);
+  margin: 0 0 var(--space-8);
+}
+
+.jt-locked__body {
+  margin: 0;
+  opacity: 0.85;
+  max-width: var(--max-text-width);
+}
+
+@media (max-width: 768px) {
+  .jt-page {
+    padding: var(--space-24);
+  }
+
+  .jt-card {
+    padding: var(--space-24);
+  }
+
+  .jt-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .jt-check {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

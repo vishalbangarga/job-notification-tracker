@@ -23,6 +23,14 @@ const routes = {
     title: "Proof",
     subtitle: "Placeholder area for collecting artifacts and evidence.",
   },
+  "/jt/07-test": {
+    title: "Test Checklist",
+    subtitle: "A built-in checklist to validate core behaviors before shipping.",
+  },
+  "/jt/08-ship": {
+    title: "Ship",
+    subtitle: "Shipping is locked until all tests are complete.",
+  },
   "__404__": {
     title: "Page Not Found",
     subtitle: "The page you are looking for does not exist.",
@@ -34,6 +42,7 @@ const PREFERENCES_KEY = "jobTrackerPreferences";
 const DIGEST_KEY_PREFIX = "jobTrackerDigest_";
 const STATUS_KEY = "jobTrackerStatus";
 const STATUS_HISTORY_KEY = "jobTrackerStatusHistory";
+const TEST_STATUS_KEY = "jobTrackerTestStatus";
 const ALL_JOBS = Array.isArray(window.JOBS) ? window.JOBS : [];
 
 let currentFilters = {
@@ -60,6 +69,102 @@ const DEFAULT_PREFERENCES = {
 };
 
 const STATUS_VALUES = ["Not Applied", "Applied", "Rejected", "Selected"];
+
+const TEST_ITEMS = [
+  {
+    id: "pref-persist",
+    label: "Preferences persist after refresh",
+    howToTest: "Set preferences in Settings, refresh the page, confirm fields are still filled.",
+  },
+  {
+    id: "match-score",
+    label: "Match score calculates correctly",
+    howToTest: "Set a keyword/skill that clearly matches a job, then verify the Match badge increases as per rules.",
+  },
+  {
+    id: "toggle-matches",
+    label: "\"Show only matches\" toggle works",
+    howToTest: "Enable the toggle and confirm only jobs above your min match score remain.",
+  },
+  {
+    id: "save-persist",
+    label: "Save job persists after refresh",
+    howToTest: "Save a job, refresh, then check it still appears under Saved.",
+  },
+  {
+    id: "apply-new-tab",
+    label: "Apply opens in new tab",
+    howToTest: "Click Apply on a job card and confirm it opens a new tab/window.",
+  },
+  {
+    id: "status-persist",
+    label: "Status update persists after refresh",
+    howToTest: "Set a status (Applied/Rejected/Selected), refresh, confirm the badge remains.",
+  },
+  {
+    id: "status-filter",
+    label: "Status filter works correctly",
+    howToTest: "Filter by a status and confirm only jobs with that status appear.",
+  },
+  {
+    id: "digest-top-10",
+    label: "Digest generates top 10 by score",
+    howToTest: "Generate digest and confirm items are ordered by Match desc, then Posted asc.",
+  },
+  {
+    id: "digest-persist-day",
+    label: "Digest persists for the day",
+    howToTest: "Generate digest, refresh, confirm the same digest is loaded for today.",
+  },
+  {
+    id: "no-console-errors",
+    label: "No console errors on main pages",
+    howToTest: "Open DevTools console and navigate across main routes; confirm no errors appear.",
+  },
+];
+
+function loadTestStatus() {
+  try {
+    const raw = window.localStorage.getItem(TEST_STATUS_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    const obj = parsed && typeof parsed === "object" ? parsed : {};
+    const result = {};
+    TEST_ITEMS.forEach((item) => {
+      result[item.id] = Boolean(obj[item.id]);
+    });
+    return result;
+  } catch {
+    const result = {};
+    TEST_ITEMS.forEach((item) => {
+      result[item.id] = false;
+    });
+    return result;
+  }
+}
+
+function saveTestStatus(status) {
+  try {
+    window.localStorage.setItem(TEST_STATUS_KEY, JSON.stringify(status));
+  } catch {
+    // ignore storage failure
+  }
+}
+
+function clearTestStatus() {
+  try {
+    window.localStorage.removeItem(TEST_STATUS_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function getTestsPassedCount(status) {
+  return TEST_ITEMS.reduce((acc, item) => acc + (status[item.id] ? 1 : 0), 0);
+}
+
+function allTestsPassed(status) {
+  return getTestsPassedCount(status) === TEST_ITEMS.length;
+}
 
 function loadSavedJobIds() {
   try {
@@ -632,6 +737,16 @@ function render(path) {
     `;
     return;
   }
+
+  if (path === "/jt/07-test") {
+    renderTestChecklist(container);
+    return;
+  }
+
+  if (path === "/jt/08-ship") {
+    renderShip(container);
+    return;
+  }
 }
 
 function renderDashboard(container) {
@@ -859,6 +974,161 @@ function renderDigest(container) {
   }
 
   setupDigestActions(today, prefs);
+}
+
+function renderTestChecklist(container) {
+  container.innerHTML = `
+    <section class="context-header">
+      <h1 class="context-header__title">${routes["/jt/07-test"].title}</h1>
+      <p class="context-header__subtitle">
+        ${routes["/jt/07-test"].subtitle}
+      </p>
+    </section>
+    <section class="jt-page" aria-label="Test checklist">
+      <article class="jt-card">
+        <h2 class="jt-card__title">Built-In Test Checklist</h2>
+        <p class="jt-card__subtitle">
+          Check off each item once verified. State persists locally.
+        </p>
+
+        <div class="jt-summary" role="status" aria-live="polite">
+          <p class="jt-summary__count" id="jt-test-summary">Tests Passed: 0 / 10</p>
+          <p class="jt-summary__warning" id="jt-test-warning">Resolve all issues before shipping.</p>
+        </div>
+
+        <div class="jt-checklist" id="jt-checklist"></div>
+
+        <div class="jt-actions">
+          <button class="btn btn-secondary" type="button" id="jt-reset-tests">Reset Test Status</button>
+          <button class="btn btn-primary" type="button" id="jt-go-ship" disabled>Go to Ship</button>
+          <span id="jt-test-status" style="opacity: 0.8;"></span>
+        </div>
+      </article>
+    </section>
+  `;
+
+  setupTestChecklist();
+}
+
+function setupTestChecklist() {
+  const status = loadTestStatus();
+  const summary = document.getElementById("jt-test-summary");
+  const warning = document.getElementById("jt-test-warning");
+  const list = document.getElementById("jt-checklist");
+  const resetBtn = document.getElementById("jt-reset-tests");
+  const shipBtn = document.getElementById("jt-go-ship");
+  const statusText = document.getElementById("jt-test-status");
+
+  function setStatusText(message) {
+    if (statusText) statusText.textContent = message || "";
+  }
+
+  function updateSummary() {
+    const passed = getTestsPassedCount(status);
+    if (summary) summary.textContent = `Tests Passed: ${passed} / ${TEST_ITEMS.length}`;
+    if (warning) warning.style.display = passed < TEST_ITEMS.length ? "block" : "none";
+    if (shipBtn) shipBtn.disabled = passed < TEST_ITEMS.length;
+  }
+
+  if (list) {
+    list.innerHTML = TEST_ITEMS.map((item) => {
+      const checked = status[item.id] ? "checked" : "";
+      return `
+        <div class="jt-check">
+          <label class="jt-check__left">
+            <input class="jt-check__box" type="checkbox" data-test-id="${item.id}" ${checked} />
+            <span class="jt-check__label">${item.label}</span>
+          </label>
+          <span class="jt-check__help" title="How to test: ${item.howToTest}">How to test</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  updateSummary();
+
+  if (list) {
+    list.addEventListener("change", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      if (target.type !== "checkbox") return;
+      const id = target.getAttribute("data-test-id");
+      if (!id) return;
+      status[id] = Boolean(target.checked);
+      saveTestStatus(status);
+      updateSummary();
+      setStatusText("Saved.");
+      window.setTimeout(() => setStatusText(""), 1200);
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      clearTestStatus();
+      TEST_ITEMS.forEach((item) => {
+        status[item.id] = false;
+      });
+      saveTestStatus(status);
+      render("/jt/07-test");
+      setActiveLink(getPath());
+    });
+  }
+
+  if (shipBtn) {
+    shipBtn.addEventListener("click", () => {
+      if (!allTestsPassed(status)) {
+        showToast("Complete all tests before shipping.");
+        return;
+      }
+      navigate("/jt/08-ship");
+    });
+  }
+}
+
+function renderShip(container) {
+  const status = loadTestStatus();
+  const passed = getTestsPassedCount(status);
+  const locked = passed < TEST_ITEMS.length;
+
+  container.innerHTML = `
+    <section class="context-header">
+      <h1 class="context-header__title">${routes["/jt/08-ship"].title}</h1>
+      <p class="context-header__subtitle">
+        ${routes["/jt/08-ship"].subtitle}
+      </p>
+    </section>
+    <section class="jt-page" aria-label="Ship">
+      <article class="jt-card">
+        <h2 class="jt-card__title">Release Gate</h2>
+        <p class="jt-card__subtitle">
+          Tests Passed: ${passed} / ${TEST_ITEMS.length}
+        </p>
+        ${
+          locked
+            ? `
+              <div class="jt-locked">
+                <div class="jt-locked__title">Complete all tests before shipping.</div>
+                <p class="jt-locked__body">
+                  This route remains locked until every checklist item is checked.
+                </p>
+                <div style="height: var(--space-16);"></div>
+                <button class="btn btn-secondary" type="button" onclick="navigate('/jt/07-test')">
+                  Go to Test Checklist
+                </button>
+              </div>
+            `
+            : `
+              <div class="jt-locked">
+                <div class="jt-locked__title">All tests complete.</div>
+                <p class="jt-locked__body">
+                  You’ve met the release gate. You can proceed with shipping steps outside this demo.
+                </p>
+              </div>
+            `
+        }
+      </article>
+    </section>
+  `;
 }
 
 function renderDigestBody(digest) {
